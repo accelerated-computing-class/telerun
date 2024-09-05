@@ -17,15 +17,17 @@ import tarfile
 import io
 import struct
 
-version = "0.1"
+version = "0.1.1"
 
 network_timeout = 120 # seconds
 poll_interval = 0.25 # seconds
 
 job_id_digits = 7 # minimum number of digits to display for job IDs
 
+script_file = os.path.realpath(__file__)
+
 def get_script_dir():
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.abspath(script_file))
 
 def render_job(job_id):
     return str(job_id).zfill(job_id_digits)
@@ -465,7 +467,7 @@ def update_handler(args):
 
     if not args.yes:
         print()
-        print(f"Update {__file__!r} to version {latest_version}?")
+        print(f"Update {script_file!r} to version {latest_version}?")
         print(f"(A backup of the current version will be saved to {backup_path!r})")
         print("[Y/n] ", end=" ")
         prompt_response = input().strip().lower()
@@ -477,13 +479,13 @@ def update_handler(args):
     # fine for now, but it could be fixed by checking the version again after the update.
     update_response = ctx.request("GET", "/api/update", {"client_type": "user"}, use_version=False)
 
-    os.rename(__file__, backup_path)
+    os.rename(script_file, backup_path)
     print(f"Saved backup of old client to {backup_path!r}")
 
-    with open(__file__, "w") as f:
+    with open(script_file, "w") as f:
         f.write(update_response["source"])
 
-    print(f"Successfully updated {__file__!r} to version {latest_version}")
+    print(f"Successfully updated {script_file!r} to version {latest_version}")
 
 def list_jobs_handler(args):
     raise NotImplementedError()
