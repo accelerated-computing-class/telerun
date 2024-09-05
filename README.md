@@ -1,6 +1,6 @@
 # Telerun
 
-Telerun is a tool we've developed for [6.S894](https://accelerated-computing-class.github.io/fall24/) which lets you compile and run code on remote servers featuring special hardware. This is the repository for the Telerun client.
+Telerun is a tool we've developed for [6.S894](https://accelerated-computing-class.github.io/fall24/) which lets you compile and run code on remote servers. This is the repository for the Telerun client.
 
 ## Setup
 
