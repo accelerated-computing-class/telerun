@@ -17,7 +17,7 @@ import tarfile
 import io
 import struct
 
-version = "0.1.1"
+version = "0.1.2"
 
 network_timeout = 120 # seconds
 poll_interval = 0.25 # seconds
@@ -33,7 +33,7 @@ def render_job(job_id):
     return str(job_id).zfill(job_id_digits)
 
 def get_connection_config(args):
-    if args.connection is not None:
+    if hasattr(args, "connection") and args.connection is not None:
         config_path = args.connection
     else:
         config_path = os.path.join(get_script_dir(), "connection.json")
@@ -136,18 +136,20 @@ def check_version(ctx):
     if response["latest_user"] != version:
         supported = at_least_version(response["compat_user"])
         if supported:
-            print(f"A new Telerun client version is available", file=sys.stderr)
+            print(f"A new Telerun client version is available (version {response['latest_user']})", file=sys.stderr)
         else:
             print(f"Version {version} of the Telerun client is no longer supported", file=sys.stderr)
-        print(
-            "\n"
-            f"To update to version {response['latest_user']}, run:\n"
-            "\n"
-            "    python3 telerun.py update\n",
-            "\n",
-            end="",
-            file=sys.stderr,
-        )
+        print("\nTo update, pull the latest commit from the Telerun repository\n", file=sys.stderr)
+        # # Work in progress:
+        # print(
+        #     "\n"
+        #     f"To update to version {response['latest_user']}, run:\n"
+        #     "\n"
+        #     "    python3 telerun.py update\n",
+        #     "\n",
+        #     end="",
+        #     file=sys.stderr,
+        # )
         if not supported:
             exit(1)
 
@@ -203,10 +205,11 @@ def timestamp():
     return datetime.now().strftime("%Y-%m-%d %I:%M %p")
 
 def submit_handler(args):
-    if args.async_ and args.out is not None:
-        print("Arguments '--out' and '--async' are mutually exclusive", file=sys.stderr)
-        print("To get the output of an asynchronous job, use 'telerun.py get-output <job_id>'", file=sys.stderr)
-        exit(1)
+    # # Work in progress:
+    # if args.async_ and args.out is not None:
+    #     print("Arguments '--out' and '--async' are mutually exclusive", file=sys.stderr)
+    #     print("To get the output of an asynchronous job, use 'telerun.py get-output <job_id>'", file=sys.stderr)
+    #     exit(1)
 
     connection = get_connection_config(args)
     auth = get_auth_config(args)
@@ -280,8 +283,8 @@ def submit_handler(args):
     print(f"{timestamp()}    submitted job {render_job(job_id)}")
     print()
 
-    if args.async_:
-        return
+    # if args.async_:
+    #     return
 
     out_dir = get_out_dir(args, job_id)
 
@@ -388,16 +391,18 @@ def submit_handler(args):
         if cancel_result != "success":
             print(f"{timestamp()}    detached from job")
             print()
-            print(f"Job {render_job(job_id)} is already executing and will run to completion")
-            print()
-            print("To track its progress, run:")
-            print()
-            print("    python3 telerun.py list-jobs")
-            print()
-            print("To get its output when it completes, run:")
-            print()
-            print(f"    python3 telerun.py get-output {job_id}")
-            print()
+
+            # # Work in progress:
+            # print(f"Job {render_job(job_id)} is already executing and will run to completion")
+            # print()
+            # print("To track its progress, run:")
+            # print()
+            # print("    python3 telerun.py list-jobs")
+            # print()
+            # print("To get its output when it completes, run:")
+            # print()
+            # print(f"    python3 telerun.py get-output {job_id}")
+            # print()
         else:
             print(f"{timestamp()}    cancelled job")
             print()
@@ -433,65 +438,66 @@ def cancel_handler(args):
         print(f"Job {render_job(job_id)} is already executing and will run to completion")
 
 def version_handler(args):
-    print("Telerun client version: " + version)
-    if args.offline:
+    print("Telerun client version:   " + version)
+    if hasattr(args, "offline") and args.offline:
         return
     connection = get_connection_config(args)
     ctx = Context(connection=connection)
     response = request_version(ctx)
     print(f"Latest supported version: {response['compat_user']}")
     print(f"Latest available version: {response['latest_user']}")
-    if response["latest_user"] != version:
+    if not at_least_version(response["latest_user"]):
         print()
-        print("To update, run:")
-        print()
-        print("    python3 telerun.py update")
+        print("To update, pull the latest version from the Telerun repository")
         print()
 
-def update_handler(args):
-    connection = get_connection_config(args)
-    ctx = Context(connection=connection)
-    version_response = request_version(ctx)
-    latest_version = version_response["latest_user"]
-    if latest_version == version and not args.force:
-        print("Already up to date with version " + version)
-        return
-    print("Current version: " + version)
-    print("Available version: " + latest_version)
+# # Work in progress:
+# def update_handler(args):
+#     connection = get_connection_config(args)
+#     ctx = Context(connection=connection)
+#     version_response = request_version(ctx)
+#     latest_version = version_response["latest_user"]
+#     if latest_version == version and not args.force:
+#         print("Already up to date with version " + version)
+#         return
+#     print("Current version: " + version)
+#     print("Available version: " + latest_version)
 
-    i = 0
-    backup_path = os.path.join(get_script_dir(), "/old-telerun-v{version}.py.backup")
-    while os.path.exists(backup_path):
-        i += 1
-        backup_path = os.path.join(get_script_dir(), "/old-telerun-v{version}-{i}.py")
+#     i = 0
+#     backup_path = os.path.join(get_script_dir(), "/old-telerun-v{version}.py.backup")
+#     while os.path.exists(backup_path):
+#         i += 1
+#         backup_path = os.path.join(get_script_dir(), "/old-telerun-v{version}-{i}.py")
 
-    if not args.yes:
-        print()
-        print(f"Update {script_file!r} to version {latest_version}?")
-        print(f"(A backup of the current version will be saved to {backup_path!r})")
-        print("[Y/n] ", end=" ")
-        prompt_response = input().strip().lower()
-        if prompt_response not in {"", "y", "yes"}:
-            print("Cancelled")
-            return
-    # TODO: Strictly speaking there's a race condition here where the user could update to a new
-    # version that's released between the time they check and the time they update. This is probably
-    # fine for now, but it could be fixed by checking the version again after the update.
-    update_response = ctx.request("GET", "/api/update", {"client_type": "user"}, use_version=False)
+#     if not args.yes:
+#         print()
+#         print(f"Update {script_file!r} to version {latest_version}?")
+#         print(f"(A backup of the current version will be saved to {backup_path!r})")
+#         print("[Y/n] ", end=" ")
+#         prompt_response = input().strip().lower()
+#         if prompt_response not in {"", "y", "yes"}:
+#             print("Cancelled")
+#             return
+#     # TODO: Strictly speaking there's a race condition here where the user could update to a new
+#     # version that's released between the time they check and the time they update. This is probably
+#     # fine for now, but it could be fixed by checking the version again after the update.
+#     update_response = ctx.request("GET", "/api/update", {"client_type": "user"}, use_version=False)
 
-    os.rename(script_file, backup_path)
-    print(f"Saved backup of old client to {backup_path!r}")
+#     os.rename(script_file, backup_path)
+#     print(f"Saved backup of old client to {backup_path!r}")
 
-    with open(script_file, "w") as f:
-        f.write(update_response["source"])
+#     with open(script_file, "w") as f:
+#         f.write(update_response["source"])
 
-    print(f"Successfully updated {script_file!r} to version {latest_version}")
+#     print(f"Successfully updated {script_file!r} to version {latest_version}")
 
-def list_jobs_handler(args):
-    raise NotImplementedError()
+# # Work in progress:
+# def list_jobs_handler(args):
+#     raise NotImplementedError()
 
-def get_output_handler(args):
-    raise NotImplementedError()
+# # Work in progress:
+# def get_output_handler(args):
+#     raise NotImplementedError()
 
 def login_handler(args):
     if args.auth is None:
@@ -535,47 +541,54 @@ def main():
     parser = argparse.ArgumentParser(description="Remote Code Execution as a Service", )
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 
-    parser.add_argument("-v", "--version", action="store_true", dest="version_flag", help="alias for 'version'")
+    parser.add_argument("--version", action="store_true", dest="version_flag", help="alias for 'version'")
 
     submit_parser = subparsers.add_parser('submit', help='submit a job')
     add_connection_config_arg(submit_parser)
     add_auth_arg(submit_parser)
     submit_parser.add_argument("-f", "--force", action="store_true", help="allow overriding pending jobs")
-    submit_parser.add_argument("--async", action="store_true", dest="async_", help="do not wait for the job to complete")
     add_out_dir_arg(submit_parser)
     submit_parser.add_argument("-p", "--platform", help="platform on which to run the job (default is inferred from filename: {})".format(", ".join([f"'*.{ext}' -> {platform!r}" for ext, platform in filename_platforms.items()])), choices=list(platforms))
     submit_parser.add_argument("file", help="source file to submit")
     submit_parser.add_argument("args", nargs=argparse.REMAINDER, help="arguments for your program")
+
+    # # Work in progress:
+    # submit_parser.add_argument("--async", action="store_true", dest="async_", help="do not wait for the job to complete")
+
     submit_parser.set_defaults(func=submit_handler)
 
-    cancel_parser = subparsers.add_parser('cancel', help='cancel a job')
-    add_connection_config_arg(cancel_parser)
-    add_auth_arg(cancel_parser)
-    add_job_spec_arg(cancel_parser)
-    cancel_parser.set_defaults(func=cancel_handler)
+    # # Work in progress:
+    # cancel_parser = subparsers.add_parser('cancel', help='cancel a job')
+    # add_connection_config_arg(cancel_parser)
+    # add_auth_arg(cancel_parser)
+    # add_job_spec_arg(cancel_parser)
+    # cancel_parser.set_defaults(func=cancel_handler)
 
-    list_jobs_parser = subparsers.add_parser('list-jobs', help='list all jobs for your user')
-    add_connection_config_arg(list_jobs_parser)
-    add_auth_arg(list_jobs_parser)
-    list_jobs_parser.set_defaults(func=list_jobs_handler)
+    # # Work in progress:
+    # list_jobs_parser = subparsers.add_parser('list-jobs', help='list all jobs for your user')
+    # add_connection_config_arg(list_jobs_parser)
+    # add_auth_arg(list_jobs_parser)
+    # list_jobs_parser.set_defaults(func=list_jobs_handler)
 
-    get_output_parser = subparsers.add_parser('get-output', help='get the output of a job')
-    add_connection_config_arg(get_output_parser)
-    add_auth_arg(get_output_parser)
-    add_out_dir_arg(get_output_parser)
-    add_job_spec_arg(get_output_parser)
-    get_output_parser.set_defaults(func=get_output_handler)
+    # # Work in progress:
+    # get_output_parser = subparsers.add_parser('get-output', help='get the output of a job')
+    # add_connection_config_arg(get_output_parser)
+    # add_auth_arg(get_output_parser)
+    # add_out_dir_arg(get_output_parser)
+    # add_job_spec_arg(get_output_parser)
+    # get_output_parser.set_defaults(func=get_output_handler)
 
     version_parser = subparsers.add_parser('version', help='print the version of the client and check for updates')
     version_parser.add_argument("--offline", action="store_true", help="do not check for updates")
     add_connection_config_arg(version_parser)
     version_parser.set_defaults(func=version_handler)
 
-    update_parser = subparsers.add_parser('update', help='update the client')
-    add_connection_config_arg(update_parser)
-    update_parser.add_argument("-f", "--force", action="store_true", help="force update even if already up to date")
-    update_parser.add_argument("-y", "--yes", action="store_true", help="do not prompt for confirmation")
-    update_parser.set_defaults(func=update_handler)
+    # # Work in progress:
+    # update_parser = subparsers.add_parser('update', help='update the client')
+    # add_connection_config_arg(update_parser)
+    # update_parser.add_argument("-f", "--force", action="store_true", help="force update even if already up to date")
+    # update_parser.add_argument("-y", "--yes", action="store_true", help="do not prompt for confirmation")
+    # update_parser.set_defaults(func=update_handler)
 
     login_parser = subparsers.add_parser('login', help="log in to Telerun")
     login_parser.add_argument("-f", "--force", action="store_true", help="force overwriting authentication file even if it already exists")
