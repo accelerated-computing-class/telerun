@@ -6,10 +6,11 @@ Telerun is a tool we've developed for [6.S894](https://accelerated-computing-cla
 
 ### Step 1: Download
 
-You can download the Telerun client in two ways. Either...
+Download the Telerun client by cloning this git repo:
 
-1. ...clone this repository by running `git clone git@github.com:accelerated-computing-class/telerun.git`...
-2. ...or, [download the contents of this repo as a `.zip` file](https://github.com/accelerated-computing-class/telerun/archive/refs/heads/main.zip) and unpack it to a destination of your choosing.
+```bash
+git clone git@github.com:accelerated-computing-class/telerun.git
+```
 
 Once you've obtained a copy of the Telerun client on your computer, you should have a directory containing two files: `telerun.py` and `connection.json`. You can put these files anywhere you want, but you should always keep `connection.json` in the **same directory** as `telerun.py`, wherever that is. The `telerun.py` script needs `connection.json` to be present in order to work.
 
