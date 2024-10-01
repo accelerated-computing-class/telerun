@@ -17,7 +17,7 @@ import tarfile
 import io
 import struct
 
-version = "0.1.2"
+version = "0.1.3"
 
 network_timeout = 120 # seconds
 poll_interval = 0.25 # seconds
@@ -251,6 +251,7 @@ def submit_handler(args):
 
     options = {
         "args": args.args,
+        "generate_asm": args.asm,
     }
 
     submit_query_args = {}
@@ -342,6 +343,7 @@ def submit_handler(args):
             # that the user doesn't accidentally CTRL+C out of the script before we've saved all
             # the output
             if status["curr_phase"] == "complete":
+                # Get result tarball.
                 output_archive_response = ctx.request("GET", "/api/output", {"job_id": job_id, "keys": "output_tar_gz"}, use_auth=True)
                 assert output_archive_response["success"] is True
                 check_deleted(output_archive_response["output"])
@@ -352,6 +354,26 @@ def submit_handler(args):
                     with io.BytesIO(output_archive) as output_archive_f:
                         with tarfile.open(fileobj=output_archive_f) as tar:
                             tar.extractall(out_dir, filter="data")
+
+                # Get asm/sass if requested.
+                if args.asm and (platform == "x86_64" or platform == "cuda"):
+                    output_asm_response = ctx.request("GET", "/api/output", {"job_id": job_id, "keys": "compiled_asm_sass"}, use_auth=True)
+                    assert output_asm_response["success"] is True
+                    output_asm = output_asm_response["output"].get("compiled_asm_sass")
+                    if not output_asm is None:
+                        os.makedirs(out_dir, exist_ok=True)
+                        with open(os.path.join(out_dir, "asm-sass.txt"), "w") as f:
+                            f.write(output_asm)
+
+                # Get ptx if requested.
+                if args.asm and platform == "cuda":
+                    output_asm_response = ctx.request("GET", "/api/output", {"job_id": job_id, "keys": "compiled_ptx"}, use_auth=True)
+                    assert output_asm_response["success"] is True
+                    output_asm = output_asm_response["output"].get("compiled_ptx")
+                    if not output_asm is None:
+                        os.makedirs(out_dir, exist_ok=True)
+                        with open(os.path.join(out_dir, "asm-ptx.txt"), "w") as f:
+                            f.write(output_asm)
 
             curr_state = (status["curr_phase"], status["claimed"], status["completion_status"])
             for milestone in state_histories[curr_state]:
@@ -548,6 +570,7 @@ def main():
     add_auth_arg(submit_parser)
     submit_parser.add_argument("-f", "--force", action="store_true", help="allow overriding pending jobs")
     add_out_dir_arg(submit_parser)
+    submit_parser.add_argument("-s", "--asm", action="store_true", help="generate asm/ptx/sass along with execution")
     submit_parser.add_argument("-p", "--platform", help="platform on which to run the job (default is inferred from filename: {})".format(", ".join([f"'*.{ext}' -> {platform!r}" for ext, platform in filename_platforms.items()])), choices=list(platforms))
     submit_parser.add_argument("file", help="source file to submit")
     submit_parser.add_argument("args", nargs=argparse.REMAINDER, help="arguments for your program")
