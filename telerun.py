@@ -222,6 +222,8 @@ def submit_handler(args):
             platform = "x86_64"
         elif args.file.endswith(".cu"):
             platform = "cuda"
+        elif args.file.endswith(".tar"):
+            platform = "cuda"
         else:
             supported_filenames = ", ".join(f"'*.{ext}'" for ext in filename_platforms.keys())
             supported_platforms = ", ".join(repr(platform) for platform in platforms)
@@ -246,12 +248,20 @@ def submit_handler(args):
     else:
         platform = args.platform
 
-    with open(args.file, "r") as f:
-        source = f.read()
+    is_tarball = args.file.endswith(".tar")
+    if is_tarball:
+        # If source is a tarball, read as binary and encode here.
+        with open(args.file, "rb") as f:
+            source = base64.b64encode(f.read()).decode("utf-8")
+    else:
+        # Read as a text file.
+        with open(args.file, "r") as f:
+            source = f.read()
 
     options = {
         "args": args.args,
         "generate_asm": args.asm,
+        "tarball": is_tarball,
     }
 
     submit_query_args = {}
