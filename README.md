@@ -12,7 +12,7 @@ Download the Telerun client by cloning this git repo:
 git clone git@github.com:accelerated-computing-class/telerun.git
 ```
 
-Once you've obtained a copy of the Telerun client on your computer, you should have a directory containing two files: `telerun.py` and `connection.json`. You can put these files anywhere you want, but you should always keep `connection.json` in the **same directory** as `telerun.py`, wherever that is. The `telerun.py` script needs `connection.json` to be present in order to work.
+Once you've obtained a copy of the Telerun client on your computer, you should have a directory containing `telerun.py`.
 
 ### Step 2: Login
 
@@ -67,4 +67,4 @@ Telerun executes student code on the remote server **without sandboxing**. If yo
 
 We ask that you please don't **deliberately** submit malicious code through Telerun. We rely on a certain level of trust and good faith to keep the system running; additionally, we log the username and source code associated with every job submitted, so that if someone tries to abuse the system we can identify them and ask them to stop.
 
-If you manage to **accidentally** break the Telerun system by submitting a buggy program, then Telerun itself is to blame for failing to protect against that failure mode. We ask that you please let us know (email [wbrandon@mit.edu](mailto:wbrandon@mit.edu)), and we'll do our best to fix the issue quickly.
+If you manage to **accidentally** break the Telerun system by submitting a buggy program, then Telerun itself is to blame for failing to protect against that failure mode. We ask that you please let us know (email [somo@mit.edu](mailto:somo@mit.edu)), and we'll do our best to fix the issue quickly.
