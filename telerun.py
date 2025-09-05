@@ -108,16 +108,6 @@ def get_auth_config(args):
         exit(1)
     return config
 
-def decode_login_code(login_code):
-    raw = base64.standard_b64decode(login_code)
-    username_len = struct.unpack(">I", raw[:4])[0]
-    username = raw[4:4 + username_len].decode("utf-8")
-    token = raw[4 + username_len:].hex()
-    return {
-        "username": username,
-        "token": token,
-    }
-
 class Context:
     def __init__(self, *, connection, auth=None):
         self.connection = connection
@@ -600,14 +590,26 @@ def login_handler(args):
             file=sys.stderr
         )
         exit(1)
+
+    if args.username is None:
+        print("Enter your Telerun username:")
+        print(">>> ", end="")
+        username = input()
+    else:
+        username = args.username
+
+    username = username.strip()
     if args.login_code is None:
-        print("Enter your Telerun login code:")
+        print("Enter your Telerun token:")
         print(">>> ", end="")
         login_code = input()
     else:
         login_code = args.login_code
     login_code = login_code.strip()
-    auth_config = decode_login_code(login_code)
+    auth_config = {
+        "username": username,
+        "token": login_code,
+    }
     with open(auth_path, "w") as f:
         json.dump(auth_config, f, indent=2)
     print(f"Saved authentication config to {auth_path!r}")
@@ -683,6 +685,7 @@ def main():
     login_parser.add_argument("-f", "--force", action="store_true", help="force overwriting authentication file even if it already exists")
     login_parser.add_argument("--auth", help="location to write authentication file (defaults to 'auth.json' in the same directory as your Telerun install)")
     login_parser.add_argument("login_code", help="login code (will prompt if not provided)", nargs="?")
+    login_parser.add_argument("username", help="username (will prompt if not provided)", nargs="?")
     login_parser.set_defaults(func=login_handler)
 
     args = parser.parse_args()

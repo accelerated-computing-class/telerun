@@ -18,10 +18,10 @@ Once you've obtained a copy of the Telerun client on your computer, you should h
 
 Once you've downloaded the Telerun client, you need to configure it with the credentials you'll use to authenticate with the server.
 
-If you're enrolled in [6.S894](https://accelerated-computing-class.github.io/fall24/), you will receive a "login code" by email in the first week of class. Your login code should look something like this:
+If you're enrolled in [6.S894](https://accelerated-computing-class.github.io/fall24/), you will receive a username and token by email in the first week of class. Your token should look something like this:
 
 ```
-AAAAB2V4YW1wbGWQmQC9fr2Rt7dPGEritcYGPz1wHs+i+557jZ4L6RWumw==
+4ed3536faf4ac1440b996a2f770578a26e1855f2ce11af15b64a4f18ac1e7cd5
 ```
 
 To configure Telerun with your credentials, run:
@@ -30,7 +30,7 @@ To configure Telerun with your credentials, run:
 python3 telerun.py login
 ```
 
-and copy and paste your login code into the terminal when prompted.
+and copy and paste your username and token into the terminal when prompted.
 
 This will create a file `auth.json` in the same directory as your Telerun install. You should keep `auth.json` in the **same directory** as `telerun.py`, wherever that is.
 
