@@ -61,6 +61,8 @@ The terminal output from compiling and executing your job will be saved to `./te
 
 Additionally, the program you submit can write arbitrary output files to the directory `./out/` **on the remote server**, and any files in that directory will be downloaded and saved on your local machine in the directory `./telerun-out/<job_id>/`.
 
+If you want ASM/PTX/SASS output, you can run Telerun with the `--asm` flag.
+
 ## Server Etiquette
 
 Telerun executes student code on the remote server **without sandboxing**. If you wanted to break or take over the remote execution host by submitting a malicious program, you would find that it is not hard to do so.
