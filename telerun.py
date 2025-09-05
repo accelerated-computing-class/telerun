@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from types import NoneType
 import urllib
 import urllib.parse
 import urllib.request
@@ -16,10 +17,21 @@ import textwrap
 import tarfile
 import io
 import struct
+import socket   # for socket.timeout exception
+import errno   # for errno.ECONNRESET exception
 
 version = "0.1.3"
 
-network_timeout = 120 # seconds
+# Timeouts and retry.
+http_timeout  = {
+    # This network_timeout only covers non-blocking operations on the socket; for example, this will cover
+    # connection establishment timeouts (including SSL verification/cert exchange);
+    # but this will not necessary cover the I/O over slow networks, since if the data are arriving (but slow),
+    # the socket will not timeout.
+    'network_timeout': 60,  # seconds
+    'retry_backoff_factor': 1,
+}
+
 poll_interval = 0.25 # seconds
 
 job_id_digits = 7 # minimum number of digits to display for job IDs
@@ -37,11 +49,19 @@ def get_connection_config(args):
         config_path = args.connection
     else:
         config_path = os.path.join(get_script_dir(), "connection.json")
-    if not os.path.exists(config_path):
-        print(f"No connection config found at {config_path!r}", file=sys.stderr)
-        exit(1)
-    with open(config_path, "r") as f:
-        config = json.load(f)
+    try:
+        with open(config_path) as fd:
+            config = json.load(fd)
+    except FileNotFoundError:
+        if args.connection is not None:
+            print(f"No connection config found at {args.connection!r}", file=sys.stderr)
+            exit(1)
+        config = {
+            'domain': 'telerun.accelerated-computing.io',
+            'port': 443,
+            'cert': None
+        }
+        
     if not isinstance(config, dict):
         print(f"Invalid connection config at {config_path!r}", file=sys.stderr)
         exit(1)
@@ -51,7 +71,7 @@ def get_connection_config(args):
     if not isinstance(config.get("port"), int):
         print(f"Connection config at {config_path!r} missing field 'port' of type int", file=sys.stderr)
         exit(1)
-    if not isinstance(config.get("cert"), str):
+    if not isinstance(config.get("cert"), (str, NoneType)):
         print(f"Connection config at {config_path!r} missing field 'cert' of type string", file=sys.stderr)
         exit(1)
     return config
@@ -61,7 +81,10 @@ def get_auth_config(args):
         config_path = args.auth
     else:
         config_path = os.path.join(get_script_dir(), "auth.json")
-    if not os.path.exists(config_path):
+    try:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+    except FileNotFoundError:
         print(
             f"No authentication config found at {config_path!r}\n"
             "\n"
@@ -73,8 +96,7 @@ def get_auth_config(args):
             file=sys.stderr
         )
         exit(1)
-    with open(config_path, "r") as f:
-        config = json.load(f)
+    
     if not isinstance(config, dict):
         print(f"Invalid auth config at {config_path!r}", file=sys.stderr)
         exit(1)
@@ -100,9 +122,10 @@ class Context:
     def __init__(self, *, connection, auth=None):
         self.connection = connection
         self.auth = auth
-        self.ssl_ctx = ssl.create_default_context(cadata=connection["cert"])
+        cert = connection.get("cert")
+        self.ssl_ctx = ssl.create_default_context(cadata=cert) if cert is not None else ssl.create_default_context()
 
-    def request(self, method, path, params, *, body=None, use_auth=False, use_version=True):
+    def request(self, method, path, params, *, body=None, use_auth=False, use_version=True, disable_retry=False):
         assert path.startswith("/")
         params = dict(params)
         if use_version:
@@ -117,8 +140,41 @@ class Context:
         req = urllib.request.Request(url, method=method, data=body)
         if body is not None:
             req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, context=self.ssl_ctx, timeout=network_timeout) as response:
-            return json.load(response)
+
+        # Connect to server.
+        retry_cnt = 0
+        while True:
+            try:
+                with urllib.request.urlopen(req, context=self.ssl_ctx, timeout=http_timeout['network_timeout']) as response:
+                    return json.load(response)
+            except urllib.error.URLError as e:
+                # Retry on timeout, connection reset, connection refused;
+                # Terminate immediately with a user-friendly message on SSL errors;
+                # Otherwise, raise the error.
+                do_retry = False
+                if isinstance(e.reason, socket.timeout):
+                    print(f"Failed to connect to server (timeout), retrying...")
+                    do_retry = True
+                elif isinstance(e.reason, OSError) and e.reason.errno == errno.ECONNRESET:
+                    # Handle "Connection reset by peer" error.
+                    print(f"Failed to connect to server (broken connection), retrying...")
+                    do_retry = True
+                elif isinstance(e.reason, ConnectionRefusedError):
+                    print(f"Failed to connect to server (connection refused), retrying...")
+                    do_retry = True
+                elif isinstance(e.reason, ssl.SSLError):
+                    print(f'Failed to connect to server, SSL error: {e.reason}; Is your certificate valid?')
+                    exit(0) # exit with 0 to avoid spamming the user with error messages
+
+                # Retry if needed, otherwise raise the error.
+                if do_retry and not disable_retry:
+                    retry_cnt += 1
+                    time.sleep((int)(http_timeout['retry_backoff_factor'] * (2 ** retry_cnt)))
+                else:
+                    print(f'failed @ url {url} {e.reason}', file=sys.stderr)
+                    if isinstance(e, urllib.error.HTTPError):
+                        print(f'{e.read().decode()}', file=sys.stderr)
+                    raise e
 
 def request_version(ctx):
     return ctx.request("GET", "/api/version", {}, use_version=False)
