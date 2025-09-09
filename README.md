@@ -15,7 +15,26 @@ If your Python version is less than `3.11.0`, please upgrade python.
 
 Once you've obtained a copy of the Telerun client on your computer, you should have a directory containing `telerun.py`.
 
-### Step 2: Login
+### Step 2: Installation
+
+Install `telerun` to your `$PATH` by installing it as a Python package. From inside the `telerun` directory, run:
+
+```bash
+python -m pip install -e .
+```
+
+<details>
+<summary>If you don't want to add <code>telerun</code> to your global Python installation...</summary>
+
+Create and activate a virtual environment **before** running the above command with:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+Then proceed with the `pip` command as normal. If you choose to install `telerun` into a virtual environment, you will need to run `source .venv/bin/activate` in each new shell you want the `telerun` command to be available.
+</details>
+
+### Step 3: Login
 
 Once you've downloaded the Telerun client, you need to configure it with the credentials you'll use to authenticate with the server.
 
@@ -28,7 +47,7 @@ If you're enrolled in [6.S894](https://accelerated-computing-class.github.io/fal
 To configure Telerun with your credentials, run:
 
 ```bash
-python3 telerun.py login
+telerun login
 ```
 
 and copy and paste your username and token into the terminal when prompted.
@@ -41,8 +60,8 @@ This will create a file `auth.json` in the same directory as your Telerun instal
 
 Once you've downloaded the client and logged in, you can submit programs to be compiled and executed by running:
 
-```python
-python3 telerun.py submit my_program.cpp
+```bash
+telerun submit my_program.cpp
 ```
 
 This uploads your source code to the server and creates a "job," which is a unit of work to be executed by the Telerun server.

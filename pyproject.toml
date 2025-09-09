@@ -1,0 +1,6 @@
+[project]
+name = "telerun"
+version = "0.0.1"
+
+[project.scripts]
+telerun = "telerun:main"
