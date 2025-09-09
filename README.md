@@ -11,7 +11,7 @@ Download the Telerun client by cloning this git repo:
 ```bash
 git clone git@github.com:accelerated-computing-class/telerun.git
 ```
-If your Python version is less than `3.10.0`, please upgrade python.
+If your Python version is less than `3.11.0`, please upgrade python.
 
 Once you've obtained a copy of the Telerun client on your computer, you should have a directory containing `telerun.py`.
 
